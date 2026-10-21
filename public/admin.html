@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TikTok Farm — Painel</title>
+  <style>
+    :root { --bg: #0f1226; --card: #1a1f3d; --line: #2c3366; --text: #e8eaff; --muted: #9aa0c8; --accent: #8a5cff; --ok: #2ee67a; --warn: #ffc93d; --bad: #ff4d5e; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    header { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    header h1 { font-size: 20px; margin: 0; flex: 1; }
+    main { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; padding: 16px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+    .card h2 { margin: 0 0 12px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .big { font-size: 22px; font-weight: 700; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--muted); }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+    button { background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 9px 14px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    button.secondary { background: #2c3366; }
+    button.danger { background: var(--bad); }
+    button:hover { filter: brightness(1.15); }
+    input { background: #0f1226; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 14px; min-width: 0; flex: 1; }
+    ol { margin: 0; padding-left: 22px; }
+    li { margin: 4px 0; }
+    a { color: #7fd4ff; }
+    iframe { width: 100%; aspect-ratio: 9/16; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎮 TikTok Farm — Painel</h1>
+    <span class="muted">Overlay para o OBS: <a href="/overlay.html" target="_blank" id="overlayUrl">/overlay.html</a> (1080×1920)</span>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Conexão TikTok</h2>
+      <div class="big"><span class="dot" id="tkDot"></span><span id="tkState">—</span></div>
+      <p class="muted" id="tkMsg"></p>
+      <p>👀 Espectadores: <b id="viewers">0</b> · 🖥️ Overlays abertos: <b id="overlays">0</b></p>
+      <div class="row">
+        <button class="secondary" onclick="act('reconnect')">🔄 Reconectar</button>
+        <button class="secondary" id="simBtn" onclick="toggleSim()">🧪 Simulador</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Jogo atual</h2>
+      <div class="big" id="gameTitle">—</div>
+      <p class="muted" id="gameInfo"></p>
+      <div class="row">
+        <button onclick="act('skip')">⏭️ Pular / próximo</button>
+        <button class="secondary" onclick="act('reload')">♻️ Recarregar overlay</button>
+      </div>
+      <div class="row" id="gameButtons"></div>
+    </section>
+
+    <section class="card">
+      <h2>Testar eventos</h2>
+      <div class="row"><input id="simName" placeholder="Nome do espectador (vazio = aleatório)" /></div>
+      <div class="row">
+        <input id="simText" placeholder="Comentário (ex: 2, azul)" />
+        <button onclick="sim('chat', { text: v('simText') || 'entrei' })">💬 Comentar</button>
+      </div>
+      <div class="row">
+        <button class="secondary" onclick="sim('like', { count: 10 })">❤️ 10 curtidas</button>
+        <button class="secondary" onclick="sim('follow')">💖 Seguir</button>
+        <button class="secondary" onclick="sim('share')">📢 Compartilhar</button>
+      </div>
+      <div class="row">
+        <button onclick="sim('gift', { diamonds: 1, giftName: 'Rosa' })">🌹 1💎</button>
+        <button onclick="sim('gift', { diamonds: 30, giftName: 'Rosquinha' })">🍩 30💎</button>
+        <button onclick="sim('gift', { diamonds: 199, giftName: 'Coroa' })">👑 199💎</button>
+        <button onclick="sim('gift', { diamonds: 1000, giftName: 'Leão' })">🦁 1000💎</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Esta sessão</h2>
+      <p>💎 Diamantes: <b id="diamonds">0</b> · ⚡ Eventos: <b id="events">0</b> · ⏱️ Online há <b id="uptime">—</b></p>
+      <h2 style="margin-top:16px">Top doadores</h2>
+      <ol id="gifters"></ol>
+    </section>
+
+    <section class="card">
+      <h2>Ranking geral</h2>
+      <ol id="leaderboard"></ol>
+      <div class="row"><button class="danger" onclick="confirm('Zerar o ranking geral?') && act('resetLeaderboard')">Zerar ranking</button></div>
+    </section>
+
+    <section class="card">
+      <h2>Prévia</h2>
+      <iframe src="/overlay.html?preview=1" title="Prévia do overlay"></iframe>
+      <p class="muted">A prévia roda uma cópia própria do jogo; quem conta para o ranking é o overlay aberto primeiro (normalmente o OBS).</p>
+    </section>
+  </main>
+
+  <script>
+    const GAME_NAMES = { teams: '⚔️ Guerra dos Reinos', territory: '🎨 Territórios', towerdefense: '🏰 Defesa do Castelo', race: '🏁 Corrida Maluca' };
+    const STATES = { connected: ['Conectado', 'var(--ok)'], connecting: ['Conectando…', 'var(--warn)'], reconnecting: ['Reconectando…', 'var(--warn)'], offline: ['Live offline', 'var(--warn)'], error: ['Erro', 'var(--bad)'], disabled: ['Sem usuário', 'var(--muted)'], idle: ['Parado', 'var(--muted)'] };
+    let ws, simOn = false;
+    const $ = (id) => document.getElementById(id);
+    const v = (id) => $(id).value.trim();
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function connect() {
+      ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?role=admin`);
+      ws.onmessage = (m) => { const msg = JSON.parse(m.data); if (msg.t === 'status') render(msg); };
+      ws.onclose = () => { $('tkState').textContent = 'Servidor desconectado'; setTimeout(connect, 2000); };
+    }
+    function act(action, extra = {}) { ws?.readyState === 1 && ws.send(JSON.stringify({ action, ...extra })); }
+    function sim(kind, extra = {}) { act('simulate', { kind, name: v('simName'), ...extra }); }
+    function toggleSim() { act('simulator', { enabled: !simOn }); }
+
+    function fmtDur(ms) { const m = Math.floor(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}min` : `${m}min`; }
+
+    function render(s) {
+      const [label, color] = STATES[s.tiktok.state] || [s.tiktok.state, 'var(--muted)'];
+      $('tkState').textContent = `${label} — @${s.username}`;
+      $('tkDot').style.background = color;
+      $('tkMsg').textContent = s.tiktok.message;
+      $('viewers').textContent = s.tiktok.viewers || 0;
+      $('overlays').textContent = s.overlays;
+      simOn = s.simulator;
+      $('simBtn').textContent = simOn ? '🧪 Simulador: LIGADO' : '🧪 Simulador: desligado';
+      const g = s.game;
+      if (!g) { $('gameTitle').textContent = s.overlays ? 'Aguardando overlay…' : 'Nenhum overlay aberto'; $('gameInfo').textContent = 'Abra o overlay no OBS ou no navegador.'; }
+      else if (g.phase === 'playing') { $('gameTitle').textContent = GAME_NAMES[g.game] || g.title; $('gameInfo').textContent = `⏱️ ${g.timeLeft}s restantes · 👥 ${g.players} jogadores (${g.bots} bots)`; }
+      else { $('gameTitle').textContent = 'Intervalo'; $('gameInfo').textContent = `Próximo: ${g.next || '—'} em ${g.timeLeft}s`; }
+      if (!$('gameButtons').childElementCount) {
+        for (const id of Object.keys(GAME_NAMES)) {
+          const b = document.createElement('button'); b.className = 'secondary'; b.textContent = `▶ ${GAME_NAMES[id]}`; b.onclick = () => act('play', { game: id }); $('gameButtons').append(b);
+        }
+      }
+      $('diamonds').textContent = s.session.diamonds;
+      $('events').textContent = s.session.events;
+      $('uptime').textContent = fmtDur(Date.now() - s.session.startedAt);
+      $('gifters').innerHTML = s.session.topGifters.map((x) => `<li>${esc(x.name)} — ${x.diamonds}💎</li>`).join('') || '<li class="muted">ninguém ainda</li>';
+      $('leaderboard').innerHTML = s.leaderboard.map((x) => `<li>${esc(x.name)} — ${x.points} pts · ${x.wins} 🏆</li>`).join('') || '<li class="muted">vazio</li>';
+    }
+    connect();
+  </script>
+</body>
+</html>
