@@ -6,6 +6,7 @@ import { loadConfig, publicConfig, ROOT } from './config.js';
 import { TikTokSource } from './tiktok.js';
 import { Simulator, fakeUser } from './simulator.js';
 import { LeaderboardStore } from './store.js';
+import { avatarHandler } from './avatar.js';
 
 process.on('uncaughtException', (err) => console.error('[erro não tratado]', err));
 process.on('unhandledRejection', (err) => console.error('[promise rejeitada]', err));
@@ -23,6 +24,7 @@ const app = express();
 app.disable('x-powered-by');
 app.use(express.static(path.join(ROOT, 'public'), { maxAge: 0 }));
 app.get('/', (_req, res) => res.redirect('/admin.html'));
+app.get('/avatar', avatarHandler);
 app.get('/health', (_req, res) => res.json({ ok: true, tiktok: tiktok.status.state, uptime: process.uptime() }));
 
 const server = http.createServer(app);

@@ -114,7 +114,8 @@ class GameManager {
     if (msg.action === 'skip' || msg.action === 'play') {
       if (this.phase === 'playing') this.endGame();
       else {
-        if (this.forcedNext) {
+        // durante o carregamento inicial o pedido fica guardado para o pickNext()
+        if (this.forcedNext && this.phase === 'intermission') {
           this.nextId = this.forcedNext;
           this.forcedNext = null;
           this.preview = new GAMES[this.nextId](this);
@@ -143,13 +144,21 @@ class GameManager {
 
   // ------------------------------------------------------------------ eventos do TikTok
   remember(user, e) {
-    const prev = this.users.get(user.id);
-    const u = { ...prev, ...user, avatar: user.avatar || prev?.avatar || null, lastSeen: performance.now() };
+    // Atualiza o mesmo objeto (em vez de criar outro) para que os jogadores já
+    // em jogo também recebam a foto/nome quando eles chegarem num evento posterior.
+    let u = this.users.get(user.id);
+    if (!u) {
+      u = { ...user };
+      this.users.set(user.id, u);
+    } else {
+      if (user.name) u.name = user.name;
+      if (user.avatar) u.avatar = user.avatar;
+    }
+    u.lastSeen = performance.now();
     if (e.kind === 'chat') {
       const t = parseTeam(e.text);
       if (t != null) u.teamPref = t;
     }
-    this.users.set(user.id, u);
     if (this.users.size > 5000) {
       const old = [...this.users.values()].sort((a, b) => a.lastSeen - b.lastSeen).slice(0, 1000);
       for (const o of old) this.users.delete(o.id);

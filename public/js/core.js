@@ -111,7 +111,14 @@ function loadPhoto(user, s) {
     s.ok = true;
     s.loading = false;
   };
+  let viaProxy = false;
   img.onerror = () => {
+    // Plano B: o servidor baixa a foto e repassa (contorna bloqueios do CDN do TikTok).
+    if (!viaProxy && location.protocol.startsWith('http') && /^https?:/.test(s.src)) {
+      viaProxy = true;
+      img.src = `/avatar?url=${encodeURIComponent(s.src)}`;
+      return;
+    }
     s.loading = false;
   };
   img.src = user.avatar;

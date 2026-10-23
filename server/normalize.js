@@ -1,33 +1,52 @@
 // Converte os eventos crus do TikTok em eventos simples que o overlay entende:
 //   { kind: 'chat' | 'like' | 'gift' | 'follow' | 'share' | 'enter', user: {id, name, avatar}, ... }
+//
+// O tiktok-live-connector 2.x entrega as mensagens no formato "v3" do protobuf
+// (ex.: user.avatarThumb.urlList, chat.content, gift.gift.diamondCount), embora a
+// documentação dele ainda mostre os nomes antigos (profilePicture, comment,
+// giftDetails...). Aceitamos os dois formatos para não quebrar em atualizações.
 
 function pickImageUrl(img) {
   if (!img) return null;
   if (typeof img === 'string') return img;
-  const urls = img.url || img.urlList || img.url_list || [];
+  const urls = img.urlList || img.url || img.url_list || [];
+  if (!Array.isArray(urls)) return typeof urls === 'string' ? urls : null;
   // Navegadores (e o OBS) não abrem HEIC; preferimos webp/jpeg.
-  return urls.find((u) => !/\.heic/i.test(u)) || urls[0] || null;
+  return urls.find((u) => u && !/\.heic/i.test(u)) || null;
 }
+
+const validId = (v) => v != null && v !== '' && String(v) !== '0';
 
 export function normalizeUser(u) {
   if (!u) return null;
-  const id = String(u.userId || u.uniqueId || u.displayId || '');
-  if (!id || id === '0') return null;
+  const id = [u.idStr, u.id, u.userId, u.secUid, u.displayId, u.uniqueId].find(validId);
+  if (!id) return null;
+  const handle = u.displayId || u.uniqueId || '';
   return {
-    id,
-    uniqueId: u.uniqueId || u.displayId || '',
-    name: (u.nickname || u.uniqueId || u.displayId || 'Anônimo').slice(0, 24),
+    id: String(id),
+    uniqueId: handle,
+    name: String(u.nickname || handle || 'Anônimo').slice(0, 24),
     avatar:
+      pickImageUrl(u.avatarThumb) ||
+      pickImageUrl(u.avatarMedium) ||
+      pickImageUrl(u.avatarLarge) ||
       pickImageUrl(u.profilePictureMedium) ||
       pickImageUrl(u.profilePicture) ||
       pickImageUrl(u.profilePictureLarge) ||
-      u.profilePictureUrl ||
+      pickImageUrl(u.profilePictureUrl) ||
       null,
   };
 }
 
+export const chatText = (d) => String(d.content ?? d.comment ?? '').slice(0, 200);
+export const likeCount = (d) => Math.max(1, Number(d.count ?? d.likeCount) || 1);
+export const viewerCount = (d) => Number(d.total ?? d.viewerCount) || 0;
+
+const giftDetails = (d) => d.gift || d.giftDetails || {};
+const giftType = (d) => giftDetails(d).type ?? giftDetails(d).giftType ?? d.giftType;
+
 /**
- * Presentes "combo" (giftType 1) chegam várias vezes com repeatCount crescente
+ * Presentes "combo" (tipo 1) chegam várias vezes com repeatCount crescente
  * até repeatEnd. Para o jogo reagir na hora, emitimos apenas a diferença
  * desde o último evento do mesmo combo.
  */
@@ -38,13 +57,12 @@ export class GiftStreakTracker {
   }
 
   delta(data) {
-    const userId = data.user?.userId || data.user?.uniqueId || '?';
+    const userId = normalizeUser(data.user)?.id || '?';
     const key = `${userId}:${data.giftId}:${data.groupId || ''}`;
     const repeat = Math.max(1, Number(data.repeatCount) || 1);
-    const giftType = data.giftDetails?.giftType ?? data.giftType;
     const ended = Boolean(data.repeatEnd);
 
-    if (giftType !== 1) return repeat;
+    if (Number(giftType(data)) !== 1) return repeat; // presente sem combo: chega uma vez só
 
     const prev = this.streaks.get(key)?.count || 0;
     if (ended) this.streaks.delete(key);
@@ -59,13 +77,13 @@ export class GiftStreakTracker {
 }
 
 export function normalizeGift(data, count) {
-  const details = data.giftDetails || {};
+  const details = giftDetails(data);
   const ext = data.extendedGiftInfo || {};
-  const unitDiamonds = Number(details.diamondCount || ext.diamond_count || data.diamondCount || 1);
+  const unitDiamonds = Number(details.diamondCount || ext.diamond_count || ext.diamondCount || data.diamondCount || 1);
   return {
-    giftId: data.giftId,
-    giftName: details.giftName || ext.name || data.giftName || 'Presente',
-    giftImage: pickImageUrl(details.giftImage) || pickImageUrl(details.icon) || pickImageUrl(ext.image) || null,
+    giftId: String(data.giftId ?? details.id ?? ''),
+    giftName: details.name || details.giftName || ext.name || data.giftName || 'Presente',
+    giftImage: pickImageUrl(details.image) || pickImageUrl(details.giftImage) || pickImageUrl(details.icon) || pickImageUrl(ext.image) || null,
     count,
     diamonds: Math.max(1, unitDiamonds) * count,
   };

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from 'tiktok-live-connector';
-import { GiftStreakTracker, normalizeGift, normalizeUser } from './normalize.js';
+import { GiftStreakTracker, chatText, likeCount, normalizeGift, normalizeUser, viewerCount } from './normalize.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -135,8 +135,8 @@ export class TikTokSource extends EventEmitter {
       this.emit('event', { kind, user, ...extra });
     };
 
-    conn.on(WebcastEvent.CHAT, (d) => send('chat', d, { text: String(d.comment || '').slice(0, 200) }));
-    conn.on(WebcastEvent.LIKE, (d) => send('like', d, { count: Math.max(1, Number(d.likeCount) || 1) }));
+    conn.on(WebcastEvent.CHAT, (d) => send('chat', d, { text: chatText(d) }));
+    conn.on(WebcastEvent.LIKE, (d) => send('like', d, { count: likeCount(d) }));
     conn.on(WebcastEvent.FOLLOW, (d) => send('follow', d));
     conn.on(WebcastEvent.SHARE, (d) => send('share', d));
     conn.on(WebcastEvent.MEMBER, (d) => send('enter', d));
@@ -147,7 +147,7 @@ export class TikTokSource extends EventEmitter {
     });
     conn.on(WebcastEvent.ROOM_USER, (d) => {
       this.lastEventAt = Date.now();
-      const viewers = Number(d.viewerCount) || 0;
+      const viewers = viewerCount(d);
       if (viewers !== this.status.viewers) this.setStatus({ viewers });
     });
   }
