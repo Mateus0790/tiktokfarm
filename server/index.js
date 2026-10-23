@@ -18,6 +18,10 @@ const simulator = new Simulator(cfg.simulator);
 
 const session = { startedAt: Date.now(), events: 0, diamonds: 0, gifters: new Map() };
 let lastGameState = null;
+let standby = false; // jogos parados (tela de encerramento), programa continua aberto
+
+// Código de saída que avisa o start-windows.bat / start.sh para NÃO reiniciar.
+const EXIT_STOP = 10;
 
 // ---------------------------------------------------------------- HTTP
 const app = express();
@@ -25,6 +29,13 @@ app.disable('x-powered-by');
 app.use(express.static(path.join(ROOT, 'public'), { maxAge: 0 }));
 app.get('/', (_req, res) => res.redirect('/admin.html'));
 app.get('/avatar', avatarHandler);
+// Encerrar pelo atalho encerrar-windows.bat. O cabeçalho extra impede que um site
+// qualquer aberto no navegador consiga desligar o programa.
+app.post('/api/shutdown', (req, res) => {
+  if (req.get('X-TikTokFarm') !== '1') return res.status(403).end();
+  res.json({ ok: true });
+  shutdown(EXIT_STOP);
+});
 app.get('/health', (_req, res) => res.json({ ok: true, tiktok: tiktok.status.state, uptime: process.uptime() }));
 
 const server = http.createServer(app);
@@ -80,6 +91,7 @@ function statusMsg() {
     leaderboard: store.top(10),
     session: { startedAt: session.startedAt, events: session.events, diamonds: session.diamonds, topGifters },
     games: cfg.games.rotation,
+    standby,
   };
 }
 
@@ -91,7 +103,7 @@ wss.on('connection', (ws, req) => {
   } else {
     overlays.add(ws);
     if (role === 'preview') previews.add(ws);
-    send(ws, { t: 'init', config: publicConfig(cfg), leaderboard: store.top(10) });
+    send(ws, { t: 'init', config: publicConfig(cfg), leaderboard: store.top(10), standby });
     electPrimary();
     send(ws, { t: 'primary', primary: ws === primary });
   }
@@ -139,6 +151,14 @@ function onAdminMessage(msg) {
     case 'simulator':
       msg.enabled ? simulator.start() : simulator.stop();
       break;
+    case 'standby':
+      standby = Boolean(msg.enabled);
+      broadcast(overlays, { t: 'control', action: 'standby', enabled: standby });
+      console.log(standby ? '[painel] jogos parados' : '[painel] jogos retomados');
+      break;
+    case 'shutdown':
+      shutdown(EXIT_STOP);
+      return;
     case 'reconnect':
       tiktok.reconnect();
       break;
@@ -210,11 +230,20 @@ server.listen(cfg.server.port, cfg.server.host, () => {
   }
 });
 
-function shutdown() {
-  console.log('Encerrando...');
+let shuttingDown = false;
+function shutdown(code = EXIT_STOP) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log('Encerrando o TikTok Farm...');
+  broadcast(overlays, { t: 'shutdown' });
+  broadcast(admins, { t: 'shutdown' });
+  simulator.stop();
   store.save();
-  tiktok.stop().finally(() => process.exit(0));
-  setTimeout(() => process.exit(0), 3000).unref();
+  const exit = () => process.exit(code);
+  // dá um instante para as mensagens chegarem ao overlay/painel
+  setTimeout(() => tiktok.stop().finally(exit), 300);
+  setTimeout(exit, 3000).unref();
 }
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+// Ctrl+C / fechar o terminal também encerra de vez (sem reiniciar).
+process.on('SIGINT', () => shutdown(EXIT_STOP));
+process.on('SIGTERM', () => shutdown(EXIT_STOP));

@@ -95,6 +95,14 @@ class GameManager {
         this.initSound();
         this.leaderboard = msg.leaderboard || [];
         this.rotation = [];
+        // o programa foi fechado e aberto de novo: recomeça do zero
+        if (this.serverClosed) location.reload();
+        if (msg.standby) this.setStandby(true, 'paused');
+        else if (this.phase === 'standby') this.setStandby(false);
+        break;
+      case 'shutdown':
+        this.serverClosed = true;
+        this.setStandby(true, 'closed');
         break;
       case 'primary':
         this.primary = msg.primary;
@@ -116,6 +124,8 @@ class GameManager {
 
   onControl(msg) {
     if (msg.action === 'reload') location.reload();
+    if (msg.action === 'standby') return this.setStandby(msg.enabled, 'paused');
+    if (this.phase === 'standby') return;
     if (msg.action === 'play' && GAMES[msg.game]) this.forcedNext = msg.game;
     if (msg.action === 'skip' || msg.action === 'play') {
       if (this.phase === 'playing') this.endGame();
@@ -175,6 +185,7 @@ class GameManager {
   onEvent(e) {
     if (!e?.user?.id) return;
     const u = this.remember(e.user, e);
+    if (this.phase === 'standby') return;
 
     if (e.kind === 'follow') this.addFeed(`💖 ${u.name} seguiu!`, '#ff7bd5');
     if (e.kind === 'share') this.addFeed(`📢 ${u.name} compartilhou a live!`, '#7fd4ff');
@@ -367,6 +378,7 @@ class GameManager {
     this.fx.update(dt);
     for (const f of this.feed) f.t += dt;
     this.updateBanner(dt);
+    if (this.phase === 'standby') return;
 
     if (this.phase === 'boot') {
       this.phaseT -= dt;
@@ -466,6 +478,8 @@ class GameManager {
       this.drawGiftGuide(g, this.game.giftGuide);
     } else if (this.phase === 'intermission') {
       this.drawIntermission(g);
+    } else if (this.phase === 'standby') {
+      this.drawStandby(g);
     } else {
       text(g, '🎮 Carregando...', W / 2, H / 2, 60);
     }
@@ -591,7 +605,44 @@ class GameManager {
     }
   }
 
+  /** Parar jogos (painel) ou programa fechado: mostra a tela de encerramento. */
+  setStandby(on, reason = 'paused') {
+    if (on) {
+      this.phase = 'standby';
+      this.standbyReason = reason;
+      this.game = null;
+      this.bots = [];
+      this.banners = [];
+      this.banner = null;
+      this.pendingGifts = [];
+      this.feed = [];
+      this.sound?.music(null);
+    } else if (this.phase === 'standby') {
+      this.startIntermission(null);
+    }
+  }
+
+  drawStandby(g) {
+    g.fillStyle = 'rgba(5,5,20,0.6)';
+    g.fillRect(0, 0, W, H);
+    text(g, '👋', 540, 520, 140, '#fff', 'center', 900, false);
+    text(g, 'Obrigado por jogar!', 540, 700, 72, '#ffe066');
+    text(g, this.standbyReason === 'closed' ? 'A live de jogos terminou por hoje.' : 'Os jogos estão pausados. Já voltamos!', 540, 790, 38);
+    const top = this.leaderboard.slice(0, 5);
+    if (!top.length) return;
+    roundRect(g, 120, 900, 840, 70 + top.length * 58, 24, 'rgba(10,10,30,0.8)', 'rgba(255,255,255,0.15)', 3);
+    text(g, '⭐ RANKING GERAL', 540, 936, 32, '#7fd4ff');
+    top.forEach((e, i) => {
+      const yy = 1000 + i * 58;
+      text(g, `${i + 1}º`, 180, yy, 30, '#ffe066');
+      drawAvatar(g, { id: e.id, name: e.name, avatar: e.avatar }, 250, yy, 22, '#fff', 3);
+      text(g, fitText(g, e.name, 420, 28, 800), 290, yy, 28, '#fff', 'left', 800);
+      text(g, `${e.points} pts · ${e.wins} 🏆`, 920, yy, 26, '#ccc', 'right', 700);
+    });
+  }
+
   drawStatus(g) {
+    if (this.phase === 'standby') return;
     const s = this.tiktok;
     if (!s || s.state === 'connected') return;
     const msg = s.state === 'disabled' ? '⚙️ Modo teste (sem TikTok)' : s.state === 'offline' ? '⏳ Aguardando a live começar...' : '🔌 Conectando ao chat do TikTok...';

@@ -114,6 +114,15 @@ No Windows, recomendo também:
 - Colocar um atalho do `start-windows.bat` e do OBS na pasta de inicialização (`Win+R` → `shell:startup`)
   e, no OBS, usar o parâmetro `--startstreaming` no atalho para ele já começar transmitindo.
 
+### Como encerrar
+
+- **Parar jogos** (botão no painel): o overlay mostra "Obrigado por jogar!" com o ranking e o som para,
+  mas o programa continua aberto. O mesmo botão vira **Retomar jogos**.
+- **Fechar programa** (botão no painel), **`encerrar-windows.bat`** (dois cliques) ou **Ctrl+C** na janela
+  do servidor: desliga tudo de verdade. O overlay mostra a tela de encerramento e o `start-windows.bat`
+  **não** religa sozinho. Depois é só parar a transmissão no OBS.
+- Para abrir de novo, rode o `start-windows.bat`: o overlay que ficou aberto no OBS volta sozinho.
+
 ## 6. Configurações (`config.json`)
 
 | Opção | O que faz |
@@ -152,7 +161,7 @@ No Windows, recomendo também:
 
 ```
 server/
-  index.js        servidor web + WebSocket, painel, ranking
+  index.js        servidor web + WebSocket, painel, ranking, encerramento
   tiktok.js       conexão com a live (reconexão automática + watchdog)
   normalize.js    converte eventos do TikTok (inclui combos de presentes)
   simulator.js    espectadores falsos para testes
