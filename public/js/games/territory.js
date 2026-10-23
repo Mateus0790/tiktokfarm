@@ -88,6 +88,7 @@ export class TerritoryGame extends Game {
     this.fx.ring(x, y, color, radius * 1.3, 0.7);
     this.fx.burst(x, y, color, 40, radius * 3, 10);
     this.fx.shake(10, 0.3);
+    this.sfx('splash', 0.1);
   }
 
   onLike(p, count) {
@@ -128,6 +129,7 @@ export class TerritoryGame extends Game {
     const row = clamp(Math.floor((p.y - GY) / CELL), 4, ROWS - 5);
     this.waves.push({ p, row0: row - 5, row1: row + 5, col: 0, acc: 0 });
     this.fx.flash(TEAMS[p.team].color, 0.4);
+    this.sfx('splash', 0);
     return '👑 DOMINAÇÃO!';
   }
 

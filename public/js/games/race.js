@@ -118,6 +118,7 @@ export class RaceGame extends Game {
       }
       p.prog += 0.1;
       this.fx.flash('#ffe066', 0.3);
+      this.sfx('boom', 0);
       return '⚡ RAIO NOS LÍDERES!';
     }
     p.prog += 0.3;
@@ -158,6 +159,7 @@ export class RaceGame extends Game {
         p.place = this.placed.length;
         const medal = ['🥇', '🥈', '🥉'][p.place - 1] || '🏁';
         this.fx.burst(FINISH_X, this.yOf(p), '#ffe066', 40, 400, 9);
+        this.sfx('finish', 0.2);
         this.mgr.notify(`${medal} ${p.user.name} cruzou a linha em ${p.place}º!`, '#ffe066');
       }
     }

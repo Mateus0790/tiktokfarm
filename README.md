@@ -80,9 +80,20 @@ Os jogadores simulados não entram no ranking real.
    - URL: `http://127.0.0.1:8080/overlay.html`
    - Largura **1080**, Altura **1920**
    - **Desmarque** "Desligar fonte quando não estiver visível".
-5. Se quiser som, adicione uma música de fundo como outra fonte no OBS.
+5. Na mesma fonte Navegador, marque **"Controlar áudio pelo OBS"** para o som do jogo ir para a live.
+   Confira no mixer do OBS se a fonte aparece com volume (dá para ajustar por lá também).
 
 O jogo é desenhado sempre em 1080x1920 e escala para caber em qualquer tamanho.
+
+### Som
+
+Cada jogo tem a **sua própria música de fundo** (e o intervalo tem outra), além de efeitos sonoros para
+entradas, presentes (mais forte quanto maior o presente), explosões, castelo caindo, chegada da corrida,
+vitória/derrota e a contagem regressiva. Tudo é **gerado pelo próprio programa**: não há arquivos de
+música nem direitos autorais envolvidos.
+
+No OBS o som toca sozinho. Abrindo o overlay num navegador comum, clique uma vez na página para liberar
+o áudio (regra dos navegadores). A prévia dentro do painel fica muda de propósito.
 
 ## 5. Deixando rodar 24/7 (AFK)
 
@@ -118,6 +129,8 @@ No Windows, recomendo também:
 | `players.autoJoinOnEnter` | `true` = quem só entra na live (sem comentar) já vira jogador. |
 | `players.carryOverMinutes` | Quem interagiu nesses últimos minutos entra direto no próximo jogo. |
 | `bots.enabled` / `bots.minPlayers` | Completa com bots até esse número de jogadores. |
+| `sound.enabled` | `false` = jogo sem som nenhum. |
+| `sound.musicVolume` / `sound.sfxVolume` | Volume da música e dos efeitos (0 a 1). |
 | `overlay.autoReloadHours` | Recarrega o overlay a cada X horas (0 = nunca). |
 | `overlay.giftGuideY` / `overlay.feedY` | Posição vertical da tabela de presentes e das notificações. |
 | `tiktok.*` | Tempos de reconexão e do watchdog. |

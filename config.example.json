@@ -35,6 +35,12 @@
     "minPlayers": 8
   },
 
+  "sound": {
+    "enabled": true,
+    "musicVolume": 0.35,
+    "sfxVolume": 0.6
+  },
+
   "overlay": {
     "autoReloadHours": 6,
     "giftGuideY": 1515,

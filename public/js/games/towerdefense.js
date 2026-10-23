@@ -140,6 +140,7 @@ export class TowerDefenseGame extends Game {
       });
     }
     if (n % 5 === 0) this.waveQueue.push({ hp: hp * 18, speed: 55, r: 46, color: '#ff3355', dmg: 250, emoji: '👹', boss: true });
+    this.sfx('alarm', 0);
     this.mgr.notify(n % 5 === 0 ? `👹 Onda ${n}: CHEFÃO chegando!` : `🌊 Onda ${n} chegando!`, '#ffb347');
   }
 
@@ -156,6 +157,7 @@ export class TowerDefenseGame extends Game {
       e.dead = true;
       this.totalKills++;
       if (p) p.kills++;
+      this.sfx(e.boss ? 'boom' : 'pop', e.boss ? 0 : 0.06);
       this.fx.burst(e.x, e.y, e.color, e.boss ? 60 : 10, e.boss ? 500 : 200);
       if (e.boss) {
         this.fx.shake(20, 0.5);
@@ -189,6 +191,7 @@ export class TowerDefenseGame extends Game {
     if (tier === 2) {
       p.level += 5;
       this.freezeT = 6;
+      this.sfx('freeze', 0);
       this.fx.flash('#9be7ff', 0.4);
       return '❄️ CONGELOU TUDO!';
     }
@@ -243,6 +246,7 @@ export class TowerDefenseGame extends Game {
       if (e.d >= ROUTE.total) {
         e.dead = true;
         this.castleHp -= e.dmg;
+        this.sfx('hurt', 0.15);
         this.fx.burst(CASTLE.x, CASTLE.y - 30, '#ff4d5e', 20, 300);
         this.fx.shake(12, 0.3);
         if (this.castleHp <= 0) {
@@ -270,6 +274,7 @@ export class TowerDefenseGame extends Game {
       if (!target) continue;
       p.cd = 1 / s.rate;
       this.shots.push({ x0: p.x, y0: p.y, x1: target.x, y1: target.y, t: 0.12, lv: p.level });
+      this.sfx('shoot', 0.05);
       this.damage(target, s.dmg, p);
     }
 
@@ -283,7 +288,7 @@ export class TowerDefenseGame extends Game {
       .map((p) => ({ user: p.user, win: !this.lost, points: Math.round((this.lost ? 5 : 40) + p.kills * 2 + p.damage / 200) }))
       .sort((a, b) => b.points - a.points);
     const title = this.lost ? `💀 O castelo caiu na onda ${this.wave}!` : `🏆 Castelo salvo! ${this.wave} ondas sobrevividas`;
-    return { title, color: this.lost ? '#ff4d5e' : '#2ee67a', winners };
+    return { title, color: this.lost ? '#ff4d5e' : '#2ee67a', winners, lost: this.lost };
   }
 
   // ------------------------------------------------------------ desenho

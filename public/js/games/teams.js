@@ -219,7 +219,10 @@ export class TeamsGame extends Game {
     if (u.kind === 'minion') this.minionCount[u.team]--;
     if (killer) killer.kills++;
     this.fx.burst(u.x, u.y, TEAMS[u.team].color, u.kind === 'hero' ? 18 : 6, 220, u.kind === 'hero' ? 8 : 5);
-    if (u.kind === 'hero') u.p.respawn = 4;
+    if (u.kind === 'hero') {
+      u.p.respawn = 4;
+      this.sfx('pop', 0.08);
+    }
   }
 
   damageCastle(c, amount, attacker) {
@@ -238,6 +241,7 @@ export class TeamsGame extends Game {
     this.fx.burst(c.x, c.y, t.color, 90, 650, 12);
     this.fx.ring(c.x, c.y, '#fff', 320, 0.8);
     this.fx.shake(30, 0.7);
+    this.sfx('boom', 0);
     this.mgr.notify(`🏰 O reino ${t.name} caiu!${attacker ? ` (golpe final: ${attacker.user.name})` : ''}`, t.color);
     if (this.castles.filter((k) => k.alive).length <= 1) this.finished = true;
   }
@@ -303,6 +307,7 @@ export class TeamsGame extends Game {
             u.atkCd = 0.5;
             const hit = u.dmg * 0.5;
             const owner = u.p;
+            if (Math.random() < 0.15) this.sfx('hit', 0.07);
             if (t.kind) {
               t.hp -= hit;
               if (Math.random() < 0.3) this.fx.burst(t.x, t.y, '#fff', 3, 120, 4);
@@ -365,6 +370,7 @@ export class TeamsGame extends Game {
         this.fx.burst(m.x, m.y, '#ff9d00', 70, 600, 11);
         this.fx.ring(m.x, m.y, '#ffdd55', 280);
         this.fx.shake(22, 0.5);
+        this.sfx('boom', 0.1);
         for (const u of this.grid.query(m.x, m.y, 230, this.near))
           if (u.team !== m.p.team && dist2(u.x, u.y, m.x, m.y) < 230 * 230) this.killUnit(u, m.p);
         if (c) this.damageCastle(c, m.dmg, m.p);

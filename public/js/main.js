@@ -3,6 +3,7 @@ import { TeamsGame } from './games/teams.js';
 import { TerritoryGame } from './games/territory.js';
 import { TowerDefenseGame } from './games/towerdefense.js';
 import { RaceGame } from './games/race.js';
+import { Sound } from './audio.js';
 
 const GAMES = { teams: TeamsGame, territory: TerritoryGame, towerdefense: TowerDefenseGame, race: RaceGame };
 
@@ -11,6 +12,7 @@ const DEFAULT_CONFIG = {
   players: { autoJoinOnEnter: false, carryOverMinutes: 5 },
   bots: { enabled: true, minPlayers: 8 },
   overlay: { autoReloadHours: 6, giftGuideY: 1515, feedY: 1770 },
+  sound: { enabled: true, musicVolume: 0.35, sfxVolume: 0.6 },
   username: '',
 };
 
@@ -46,6 +48,8 @@ class GameManager {
     this.instrT = 0;
     this.bootAt = performance.now();
     this.bg = this.makeBackground();
+    this.sound = null;
+    this.isPreview = new URLSearchParams(location.search).has('preview');
     this.connect();
     this.last = performance.now();
     requestAnimationFrame((t) => this.frame(t));
@@ -86,7 +90,9 @@ class GameManager {
           players: { ...DEFAULT_CONFIG.players, ...msg.config.players },
           bots: { ...DEFAULT_CONFIG.bots, ...msg.config.bots },
           overlay: { ...DEFAULT_CONFIG.overlay, ...msg.config.overlay },
+          sound: { ...DEFAULT_CONFIG.sound, ...msg.config.sound },
         };
+        this.initSound();
         this.leaderboard = msg.leaderboard || [];
         this.rotation = [];
         break;
@@ -192,9 +198,26 @@ class GameManager {
     }
     if (!p) return;
     if (e.kind === 'chat') this.game.onChat(p, e.text || '');
-    else if (e.kind === 'like') this.game.onLike(p, e.count || 1);
+    else if (e.kind === 'like') {
+      this.game.onLike(p, e.count || 1);
+      this.sfx('like', 0.25);
+    }
     else if (e.kind === 'follow') this.game.onFollow(p);
     else if (e.kind === 'share') this.game.onShare(p);
+  }
+
+  // ------------------------------------------------------------------ som
+  initSound() {
+    const cfg = this.cfg.sound;
+    // a prévia do painel fica muda para não tocar o som em dobro
+    if (this.isPreview || !cfg.enabled) return;
+    if (this.sound) this.sound.setVolumes(cfg);
+    else this.sound = new Sound(cfg);
+    this.sound.music(this.phase === 'playing' && this.game ? this.game.constructor.id : 'intermission');
+  }
+
+  sfx(name, minGap) {
+    this.sound?.play(name, minGap);
   }
 
   joinPlayer(u, team) {
@@ -202,12 +225,14 @@ class GameManager {
     if (p && !u.isBot) {
       const t = p.team != null ? ` ${TEAMS[p.team].emoji} ${TEAMS[p.team].name}` : '';
       this.addFeed(`➕ ${u.name} entrou${t}`, '#b8ffcf');
+      this.sfx('join', 0.15);
     }
     return p;
   }
 
   showGift(u, e, label) {
     const tier = giftTier(e.diamonds);
+    this.sfx(`gift${tier}`, tier >= 3 ? 0.4 : 0.08);
     const desc = `${e.giftName}${e.count > 1 ? ` x${e.count}` : ''} (${e.diamonds}💎)`;
     this.addFeed(`🎁 ${u.name}: ${desc}${label ? ` → ${label}` : ''}`, '#ffe066');
     if (tier >= 2 || this.banners.length < 2) {
@@ -256,6 +281,9 @@ class GameManager {
     this.preview = new GAMES[this.nextId](this);
     this.game = null;
     this.bots = [];
+    this.lastTick = null;
+    this.sound?.music('intermission');
+    if (result) this.sfx(result.lost ? 'lose' : 'win');
   }
 
   startGame() {
@@ -268,6 +296,8 @@ class GameManager {
     this.game = new Cls(this);
     this.game.start();
     this.phase = 'playing';
+    this.sound?.music(Cls.id);
+    this.sfx('go');
     this.timeLeft = this.cfg.games.durations[Cls.id] || 180;
     this.instrIdx = 0;
     this.instrT = 0;
@@ -345,6 +375,11 @@ class GameManager {
     }
     if (this.phase === 'intermission') {
       this.phaseT -= dt;
+      const sec = Math.ceil(this.phaseT);
+      if (sec <= 3 && sec > 0 && sec !== this.lastTick) {
+        this.lastTick = sec;
+        this.sfx('tick');
+      }
       if (this.phaseT <= 0) this.startGame();
       return;
     }

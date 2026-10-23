@@ -47,6 +47,11 @@ export class Game {
   onShare(_p) {}
   update(_dt) {}
   draw(_g) {}
+  /** Efeito sonoro (ver audio.js). */
+  sfx(name, minGap) {
+    this.mgr.sfx?.(name, minGap);
+  }
+
   timeUp() {
     this.finished = true;
   }

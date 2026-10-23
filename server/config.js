@@ -53,6 +53,7 @@ export function publicConfig(cfg) {
     players: cfg.players,
     bots: cfg.bots,
     overlay: cfg.overlay,
+    sound: cfg.sound,
     username: cfg.tiktokUsername,
   };
 }
