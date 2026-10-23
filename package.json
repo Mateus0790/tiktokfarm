@@ -1,0 +1,20 @@
+{
+  "name": "tiktokfarm",
+  "version": "1.0.0",
+  "description": "Plataforma de jogos interativos 24/7 para lives do TikTok (overlay para OBS)",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "sim": "node server/index.js --sim"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "tiktok-live-connector": "2.5.0",
+    "ws": "^8.18.3"
+  }
+}
