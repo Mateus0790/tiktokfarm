@@ -28,6 +28,14 @@ const THEMES = {
     bpm: 100, root: 43, scale: 'harmonic', prog: [0, 0, 5, 4], lead: 'sawtooth', bass: 'sawtooth', leadVol: 0.035, bassVol: 0.1,
     kick: 'x.....x...x.....', snare: '........x.......', hat: 'x.xxx.xxx.xxx.x.', leadRhythm: 'x.......x...x...', bassRhythm: 'xxxxxxxxxxxxxxxx', pad: true,
   },
+  quiz: {
+    bpm: 112, root: 48, scale: 'major', prog: [0, 3, 4, 3], lead: 'square', bass: 'triangle', leadVol: 0.04, bassVol: 0.14,
+    kick: 'x.......x.......', snare: '....x.......x...', hat: '..x...x...x...x.', leadRhythm: 'x...x.x.....x...', bassRhythm: 'x...x...x...x...',
+  },
+  guess: {
+    bpm: 96, root: 50, scale: 'dorian', prog: [0, 3, 0, 4], lead: 'triangle', bass: 'sine', leadVol: 0.08, bassVol: 0.16,
+    kick: 'x.........x.....', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', leadRhythm: 'x..x....x.x.....', bassRhythm: 'x.....x...x.....', pad: true,
+  },
   race: {
     bpm: 150, root: 47, scale: 'dorian', prog: [0, 6, 5, 6], lead: 'square', bass: 'sawtooth', leadVol: 0.06, bassVol: 0.1,
     kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'xxxxxxxxxxxxxxxx', leadRhythm: 'x.x.xx.x.x.xx.x.', bassRhythm: 'x.xxx.xxx.xxx.xx',

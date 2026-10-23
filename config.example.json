@@ -14,15 +14,23 @@
   },
 
   "games": {
-    "rotation": ["teams", "territory", "towerdefense", "race"],
+    "rotation": ["teams", "territory", "towerdefense", "race", "quiz", "guess"],
     "shuffle": false,
     "intermissionSeconds": 14,
     "durations": {
       "teams": 240,
       "territory": 180,
       "towerdefense": 300,
-      "race": 150
+      "race": 150,
+      "quiz": 240,
+      "guess": 225
     }
+  },
+
+  "voting": {
+    "enabled": true,
+    "seconds": 20,
+    "options": 3
   },
 
   "players": {

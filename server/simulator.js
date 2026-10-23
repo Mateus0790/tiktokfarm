@@ -15,7 +15,7 @@ const GIFTS = [
   { name: 'Coroa', diamonds: 199, weight: 1.5 },
   { name: 'Leão', diamonds: 1000, weight: 0.4 },
 ];
-const CHATS = ['1', '2', '3', '4', 'azul', 'vermelho', 'verde', 'amarelo', 'bora!!', 'vai time', 'kkkkk', 'entrei', 'quero jogar', 'go go go'];
+const CHATS = ['1', '2', '3', '4', 'azul', 'vermelho', 'verde', 'amarelo', 'bora!!', 'vai time', 'kkkkk', 'entrei', 'quero jogar', 'go go go', 'a', 'b', 'c', 'd', 'banana', 'gato', 'pizza', 'leão', 'foguete'];
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];

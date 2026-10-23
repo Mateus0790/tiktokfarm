@@ -47,6 +47,11 @@ export class Game {
   onShare(_p) {}
   update(_dt) {}
   draw(_g) {}
+  /** O que um bot faz de vez em quando (padrão: curtir). */
+  botAct(p) {
+    this.onLike(p, 1 + Math.floor(Math.random() * 5));
+  }
+
   /** Efeito sonoro (ver audio.js). */
   sfx(name, minGap) {
     this.mgr.sfx?.(name, minGap);

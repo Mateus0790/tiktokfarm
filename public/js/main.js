@@ -1,11 +1,13 @@
-import { ARENA, Effects, H, TEAMS, W, bar, clamp, drawAvatar, fitText, fmtTime, giftTier, parseTeam, rand, roundRect, shuffle, text } from './core.js';
+import { ARENA, Effects, H, TEAMS, W, bar, clamp, drawAvatar, fitText, fmtTime, giftTier, loadContent, normalizeText, parseTeam, pick, rand, roundRect, shuffle, text, wrapLines } from './core.js';
 import { TeamsGame } from './games/teams.js';
 import { TerritoryGame } from './games/territory.js';
 import { TowerDefenseGame } from './games/towerdefense.js';
 import { RaceGame } from './games/race.js';
+import { QuizGame } from './games/quiz.js';
+import { GuessGame } from './games/guess.js';
 import { Sound } from './audio.js';
 
-const GAMES = { teams: TeamsGame, territory: TerritoryGame, towerdefense: TowerDefenseGame, race: RaceGame };
+const GAMES = { teams: TeamsGame, territory: TerritoryGame, towerdefense: TowerDefenseGame, race: RaceGame, quiz: QuizGame, guess: GuessGame };
 
 const DEFAULT_CONFIG = {
   games: { rotation: Object.keys(GAMES), shuffle: false, intermissionSeconds: 14, durations: {} },
@@ -13,6 +15,7 @@ const DEFAULT_CONFIG = {
   bots: { enabled: true, minPlayers: 8 },
   overlay: { autoReloadHours: 6, giftGuideY: 1515, feedY: 1770 },
   sound: { enabled: true, musicVolume: 0.35, sfxVolume: 0.6 },
+  voting: { enabled: true, seconds: 20, options: 3 },
   username: '',
 };
 
@@ -50,6 +53,9 @@ class GameManager {
     this.bg = this.makeBackground();
     this.sound = null;
     this.isPreview = new URLSearchParams(location.search).has('preview');
+    this.vote = null;
+    this.lastGameId = null;
+    loadContent();
     this.connect();
     this.last = performance.now();
     requestAnimationFrame((t) => this.frame(t));
@@ -91,6 +97,7 @@ class GameManager {
           bots: { ...DEFAULT_CONFIG.bots, ...msg.config.bots },
           overlay: { ...DEFAULT_CONFIG.overlay, ...msg.config.overlay },
           sound: { ...DEFAULT_CONFIG.sound, ...msg.config.sound },
+          voting: { ...DEFAULT_CONFIG.voting, ...msg.config.voting },
         };
         this.initSound();
         this.leaderboard = msg.leaderboard || [];
@@ -138,6 +145,7 @@ class GameManager {
           this.nextId = this.forcedNext;
           this.forcedNext = null;
           this.preview = new GAMES[this.nextId](this);
+          this.vote = null;
         }
         this.phaseT = Math.min(this.phaseT, 1);
       }
@@ -156,7 +164,7 @@ class GameManager {
         timeLeft: Math.round(this.phase === 'playing' ? this.timeLeft : this.phaseT),
         players: this.phase === 'playing' ? this.game.players.size : 0,
         bots: this.bots.length,
-        next: this.nextId ? GAMES[this.nextId].title : null,
+        next: this.vote?.open ? `votação: ${this.vote.options.map((id, i) => `${GAMES[id].title} (${this.vote.counts[i]})`).join(', ')}` : this.nextId ? GAMES[this.nextId].title : null,
       },
     });
   }
@@ -175,7 +183,7 @@ class GameManager {
       if (user.platform) u.platform = user.platform;
     }
     u.lastSeen = performance.now();
-    if (e.kind === 'chat') {
+    if (e.kind === 'chat' && !(this.vote?.open && /^\s*\d\s*$/.test(e.text))) {
       const t = parseTeam(e.text);
       if (t != null) u.teamPref = t;
     }
@@ -195,6 +203,7 @@ class GameManager {
     if (e.kind === 'share') this.addFeed(`📢 ${u.name} compartilhou a live!`, '#7fd4ff');
 
     if (this.phase !== 'playing' || !this.game) {
+      if (this.vote?.open) this.voteEvent(u, e);
       if (e.kind === 'gift') {
         if (this.pendingGifts.length < 100) this.pendingGifts.push(e);
         this.showGift(u, e, 'Vale para o próximo jogo!');
@@ -288,12 +297,72 @@ class GameManager {
     return this.rotation[this.rotationIdx];
   }
 
+  // ------------------------------------------------------------------ votação
+  /** Abre a votação do próximo jogo. Retorna false se não der para votar. */
+  startVote() {
+    const v = this.cfg.voting;
+    if (!v.enabled) return false;
+    let list = this.cfg.games.rotation.filter((id) => GAMES[id]);
+    if (list.length < 2) return false;
+    if (list.length > v.options) list = list.filter((id) => id !== this.lastGameId); // não repete o último
+    const options = shuffle(list.slice()).slice(0, Math.max(2, Math.min(4, v.options)));
+    this.vote = { options, counts: options.map(() => 0), voters: new Map(), open: true };
+    this.nextId = null;
+    this.preview = null;
+    this.phaseT += v.seconds;
+    return true;
+  }
+
+  voteEvent(u, e) {
+    const v = this.vote;
+    if (e.kind === 'chat') {
+      const n = normalizeText(e.text);
+      let idx = Number(n.match(/^(?:voto |vote |v)?(\d)$/)?.[1]) - 1;
+      if (!(idx >= 0)) idx = v.options.findIndex((id) => n && (n === id || n === normalizeText(GAMES[id].title)));
+      if (!(idx >= 0 && idx < v.options.length)) return;
+      const prev = v.voters.get(u.id);
+      if (prev) {
+        if (prev.idx === idx) return;
+        v.counts[prev.idx] -= prev.weight;
+        prev.idx = idx;
+        v.counts[idx] += prev.weight;
+      } else {
+        v.voters.set(u.id, { idx, weight: 1 });
+        v.counts[idx] += 1;
+        this.sfx('pop', 0.05);
+      }
+    } else if (e.kind === 'gift') {
+      // presente = votos extras na opção que a pessoa escolheu
+      const prev = v.voters.get(u.id);
+      if (!prev) return;
+      const extra = Math.min(100, Math.max(1, Math.round(e.diamonds)));
+      prev.weight += extra;
+      v.counts[prev.idx] += extra;
+      this.addFeed(`🗳️ ${u.name} deu +${extra} votos para ${GAMES[v.options[prev.idx]].title}!`, '#ffe066');
+    }
+  }
+
+  closeVote() {
+    const v = this.vote;
+    v.open = false;
+    const max = Math.max(...v.counts);
+    const best = v.options.filter((_, i) => v.counts[i] === max);
+    this.nextId = pick(best);
+    this.preview = new GAMES[this.nextId](this);
+    v.winner = this.nextId;
+    this.sfx('finish', 0);
+    if (max > 0) this.addFeed(`🗳️ ${GAMES[this.nextId].title} venceu a votação!`, '#7fd4ff');
+  }
+
   startIntermission(result) {
     this.phase = 'intermission';
     this.lastResult = result;
     this.phaseT = result ? this.cfg.games.intermissionSeconds : 6;
-    this.nextId = this.pickNext();
-    this.preview = new GAMES[this.nextId](this);
+    this.vote = null;
+    if (this.forcedNext || !this.startVote()) {
+      this.nextId = this.pickNext();
+      this.preview = new GAMES[this.nextId](this);
+    }
     this.game = null;
     this.bots = [];
     this.lastTick = null;
@@ -308,6 +377,7 @@ class GameManager {
       return;
     }
     const Cls = GAMES[this.nextId] || GAMES.race;
+    this.lastGameId = Cls.id;
     this.game = new Cls(this);
     this.game.start();
     this.phase = 'playing';
@@ -391,6 +461,7 @@ class GameManager {
     }
     if (this.phase === 'intermission') {
       this.phaseT -= dt;
+      if (this.vote?.open && this.phaseT <= 4) this.closeVote();
       const sec = Math.ceil(this.phaseT);
       if (sec <= 3 && sec > 0 && sec !== this.lastTick) {
         this.lastTick = sec;
@@ -411,7 +482,7 @@ class GameManager {
       const t = this.botTimers.get(b.id) - dt;
       if (t <= 0) {
         const p = this.game.getPlayer(b.id);
-        if (p) this.game.onLike(p, Math.ceil(rand(1, 6)));
+        if (p) this.game.botAct(p);
         this.botTimers.set(b.id, rand(1.5, 5));
       } else this.botTimers.set(b.id, t);
     }
@@ -596,9 +667,15 @@ class GameManager {
       y += 100 + top.length * 58;
     }
 
+    if (this.vote?.open) {
+      // sem resultado anterior (início da live) o painel sobe para não sobrar espaço vazio
+      this.drawVote(g, r ? Math.max(y + 30, 1120) : Math.max(y + 60, 620));
+      return;
+    }
+
     // próximo jogo
     const N = GAMES[this.nextId];
-    if (N) {
+    if (N && this.preview) {
       y = Math.max(y + 30, 1150);
       text(g, 'PRÓXIMO JOGO', 540, y, 32, '#aaa');
       text(g, `${N.emoji} ${N.title}`, 540, y + 65, 62, '#fff');
@@ -607,6 +684,37 @@ class GameManager {
       text(g, `Começa em ${Math.ceil(this.phaseT)}`, 540, y + 205, 52, '#ffe066');
       this.drawGiftGuide(g, preview.giftGuide);
     }
+  }
+
+  drawVote(g, y) {
+    const v = this.vote;
+    const total = v.counts.reduce((a, b) => a + b, 0);
+    const lead = Math.max(...v.counts);
+    text(g, '🗳️ VOTE NO PRÓXIMO JOGO', 540, y, 44, '#ffe066');
+    const nums = v.options.map((_, i) => i + 1).join(', ').replace(/, (\d)$/, ' ou $1');
+    text(g, `Comente ${nums}  ·  🎁 presente = votos extras`, 540, y + 52, 28, '#b8ffcf', 'center', 800);
+    const n = v.options.length;
+    const w = (1080 - 30 * (n + 1)) / n;
+    v.options.forEach((id, i) => {
+      const G = GAMES[id];
+      const x = 30 + i * (w + 30);
+      const top = y + 95;
+      const leading = total > 0 && v.counts[i] === lead;
+      roundRect(g, x, top, w, 300, 26, 'rgba(10,10,30,0.85)', leading ? '#ffd700' : 'rgba(255,255,255,0.2)', leading ? 6 : 3);
+      g.fillStyle = '#8a5cff';
+      g.beginPath();
+      g.arc(x + 40, top + 40, 28, 0, Math.PI * 2);
+      g.fill();
+      text(g, String(i + 1), x + 40, top + 42, 34);
+      text(g, G.emoji, x + w / 2, top + 95, 80, '#fff', 'center', 900, false);
+      wrapLines(g, G.title, w - 30, 30)
+        .slice(0, 2)
+        .forEach((l, k) => text(g, l, x + w / 2, top + 175 + k * 34, 30));
+      const share = total ? v.counts[i] / total : 0;
+      bar(g, x + 20, top + 240, w - 40, 16, share, leading ? '#ffd700' : '#8a5cff');
+      text(g, `${v.counts[i]} voto${v.counts[i] === 1 ? '' : 's'} (${Math.round(share * 100)}%)`, x + w / 2, top + 280, 24, '#ddd', 'center', 700);
+    });
+    text(g, `Votação termina em ${Math.max(0, Math.ceil(this.phaseT - 4))}s`, 540, y + 450, 40, '#ffe066');
   }
 
   /** Parar jogos (painel) ou programa fechado: mostra a tela de encerramento. */

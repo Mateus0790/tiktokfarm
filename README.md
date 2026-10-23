@@ -13,6 +13,15 @@ Os jogos se revezam automaticamente, com tela de resultado e ranking entre eles:
 | 🎨 **Domínio de Territórios** | Dominar áreas | Seu avatar quica pelo mapa pintando o chão com a cor do seu time. Mais território no fim = vitória. |
 | 🏰 **Defesa do Castelo** | Tower defense (cooperativo) | Cada pessoa vira uma torre com o próprio avatar e atira sozinha nas ondas de monstros. |
 | 🏁 **Corrida Maluca** | Corrida | Seu avatar corre sozinho; comentários e curtidas empurram. Os 3 primeiros vencem. |
+| 🧠 **Quiz Show** | Perguntas e respostas | Perguntas de múltipla escolha: comente **A, B, C ou D**. Quem acerta mais rápido ganha mais pontos. |
+| ✏️ **Adivinha a Palavra** | Estilo Gartic | Aparecem a categoria e os espaços da palavra; letras e uma dica em emoji surgem com o tempo. Os 3 primeiros a escrever a palavra pontuam. |
+
+### 🗳️ O público escolhe o próximo jogo
+
+No intervalo entre os jogos aparece uma **votação com 3 jogos**: é só comentar `1`, `2` ou `3`.
+Quem já votou e manda um presente dá **votos extras** para a opção escolhida (1💎 = 1 voto, até 100
+por presente). Se ninguém votar, o jogo é sorteado entre as opções. O último jogo não aparece de novo
+na votação seguinte.
 
 ## Como o público joga
 
@@ -28,6 +37,10 @@ Os jogos se revezam automaticamente, com tela de resultado e ranking entre eles:
 | 10+ 💎 | Herói **gigante** + cura o castelo | **Bomba de tinta** | **Congela** todos os monstros | Pulo + **escudo** |
 | 100+ 💎 | **Meteoro** no castelo inimigo (ou revive o seu) | **Tsunami** no time líder | **Bombardeio** + cura | **Raio** nos 5 líderes |
 | 1000+ 💎 | **Dragão**: arrasa os inimigos | **Dominação** de uma faixa do mapa | **Nuke** + castelo novo | **Foguete** (+30%) |
+
+No **Quiz** e no **Adivinha a Palavra**, presentes dão **multiplicador** para o próximo acerto
+(1+💎: x2 acumulando até x5; 10+💎: x3 e uma ajuda para todos, eliminando uma alternativa errada ou
+revelando uma letra; 100+💎: +50 pontos; 1000+💎: +300 pontos e x5).
 
 A tabela de presentes do jogo atual aparece na tela o tempo todo. Presentes enviados no intervalo
 entre jogos **não se perdem**: valem assim que o próximo jogo começa.
@@ -161,6 +174,13 @@ No Windows, recomendo também:
   **não** religa sozinho. Depois é só parar a transmissão no OBS.
 - Para abrir de novo, rode o `start-windows.bat`: o overlay que ficou aberto no OBS volta sozinho.
 
+### Suas próprias perguntas e palavras
+
+As perguntas do Quiz ficam em `public/content/perguntas.json` e as palavras do Adivinha em
+`public/content/palavras.json`. Dá para editar no Bloco de Notas e adicionar quantas quiser, seguindo
+o mesmo formato (no Quiz, a **primeira alternativa é sempre a certa**; o jogo embaralha na tela). As
+mudanças valem a partir do próximo jogo (ou clique em "Recarregar overlay" no painel).
+
 ## 6. Configurações (`config.json`)
 
 | Opção | O que faz |
@@ -171,7 +191,8 @@ No Windows, recomendo também:
 | `signApiKey` | Opcional. Chave da [Euler Stream](https://www.eulerstream.com) (serviço que a biblioteca usa para conectar no chat). Use se a conexão começar a falhar por limite de uso. |
 | `server.port` | Porta do servidor (padrão 8080). |
 | `server.host` | `127.0.0.1` = só este PC acessa. Use `0.0.0.0` para abrir o painel de outro aparelho da rede (qualquer pessoa na sua rede poderá controlar). |
-| `games.rotation` | Ordem dos jogos. Remova um para tirá-lo da rotação. IDs: `teams`, `territory`, `towerdefense`, `race`. |
+| `games.rotation` | Jogos que podem aparecer (e a ordem, se a votação estiver desligada). Remova um para tirá-lo. IDs: `teams`, `territory`, `towerdefense`, `race`, `quiz`, `guess`. |
+| `voting.enabled` / `voting.seconds` / `voting.options` | Liga a votação do próximo jogo, quanto tempo ela dura e quantas opções aparecem (2 a 4). |
 | `games.shuffle` | `true` = ordem aleatória a cada ciclo. |
 | `games.durations` | Duração máxima de cada jogo em segundos. |
 | `games.intermissionSeconds` | Duração da tela de resultado entre jogos. |
@@ -214,7 +235,8 @@ public/
   admin.html      painel de controle
   js/main.js      gerenciador: rotação, HUD, presentes, bots, intervalo
   js/core.js      avatares, efeitos, utilitários de desenho
-  js/games/       um arquivo por jogo (teams, territory, towerdefense, race)
+  js/games/       um arquivo por jogo (teams, territory, towerdefense, race, quiz, guess)
+  content/        perguntas do Quiz e palavras do Adivinha (JSON editável)
 ```
 
 ### Criando um jogo novo

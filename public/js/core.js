@@ -331,3 +331,59 @@ export class SpatialGrid {
     return out;
   }
 }
+
+// ------------------------------------------------------------------ Texto de chat
+/** "Maçã!" → "maca": minúsculas, sem acentos, só letras e números. */
+export function normalizeText(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/** Quebra um texto em linhas que caibam em maxW. */
+export function wrapLines(g, str, maxW, size, weight = 900) {
+  g.font = `${weight} ${size}px ${FONT}`;
+  const lines = [];
+  let line = '';
+  for (const word of String(str).split(/\s+/)) {
+    const test = line ? `${line} ${word}` : word;
+    if (g.measureText(test).width > maxW && line) {
+      lines.push(line);
+      line = word;
+    } else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** Distância de edição (para o "quase!" do Adivinha a Palavra). */
+export function editDistance(a, b) {
+  const m = a.length;
+  const n = b.length;
+  if (Math.abs(m - n) > 2) return 99;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+
+// ------------------------------------------------------------------ Conteúdo editável
+/** Perguntas e palavras ficam em public/content/*.json para serem fáceis de editar. */
+export const content = { perguntas: [], palavras: [] };
+export async function loadContent() {
+  for (const key of ['perguntas', 'palavras']) {
+    try {
+      const r = await fetch(`content/${key}.json`, { cache: 'no-store' });
+      const data = await r.json();
+      content[key] = (data[key] || []).filter((x) => (key === 'perguntas' ? x.q && x.a?.length >= 2 : x.w));
+    } catch (err) {
+      console.warn(`não consegui carregar content/${key}.json`, err);
+    }
+  }
+}

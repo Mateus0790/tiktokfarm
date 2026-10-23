@@ -57,6 +57,7 @@ export function publicConfig(cfg) {
     bots: cfg.bots,
     overlay: cfg.overlay,
     sound: cfg.sound,
+    voting: cfg.voting,
     username: cfg.tiktokUsername,
     youtube: Boolean(String(cfg.youtube?.channel || '').trim()),
   };
