@@ -1,4 +1,4 @@
-# 🎮 TikTok Farm — jogos interativos 24/7 para lives do TikTok
+# 🎮 TikTok Farm — jogos interativos 24/7 para lives do TikTok e YouTube
 
 Plataforma que transforma a sua live do TikTok em um **jogo interativo que roda sozinho**.
 Você deixa o computador ligado com o OBS transmitindo; quem está assistindo entra no jogo
@@ -61,11 +61,49 @@ Quem interagiu nos últimos minutos já entra automaticamente no próximo jogo, 
    - **Overlay (para o OBS):** <http://127.0.0.1:8080/overlay.html>
    - **Painel de controle:** <http://127.0.0.1:8080/admin.html>
 
+## 2.1 YouTube (opcional): TikTok + YouTube no mesmo jogo
+
+O programa também lê o chat da sua live do YouTube (sem cadastro nem chave de API) e **mistura os dois
+chats no mesmo jogo**. Quem vem do YouTube aparece com um selo vermelho ▶ no avatar.
+
+1. No `config.json`, preencha o seu canal:
+   ```json
+   "youtube": { "channel": "@seucanal" }
+   ```
+   Também aceita o ID do canal (`UC...`) ou o link de um vídeo ao vivo específico.
+2. Quando a live do YouTube começar, o programa encontra sozinho e conecta no chat
+   (se ainda não estiver ao vivo, tenta de novo a cada 60s, igual ao TikTok).
+
+No YouTube:
+- **Comentário** = entra no jogo e escolhe time, igual ao TikTok.
+- **Super Chat / Super Sticker** = presente. O valor é convertido em "diamantes" equivalentes
+  (padrão: US$ 1 ≈ 75💎, então R$ 5 ≈ 10+💎, R$ 10 ≈ 100+💎, R$ 100 ≈ 1000+💎). Ajuste em
+  `youtube.diamondsPerDollar`.
+- **Novo membro** = presente de ~150💎. Assinaturas de presente valem por quantidade.
+- O YouTube **não informa curtidas** pelo chat, então curtidas só contam no TikTok.
+
+### Transmitindo nos dois ao mesmo tempo com o Restream
+
+O OBS manda o vídeo **uma vez só** para o Restream, e o Restream repassa para o TikTok e o YouTube
+(economiza a sua internet de upload). Os chats **não** passam pelo Restream: o programa lê cada um direto.
+
+1. Crie a conta no [Restream](https://restream.io) e adicione os canais **YouTube** e **TikTok**.
+   Para o TikTok, a sua conta precisa ter **chave de transmissão**; se o TikTok não aparecer como
+   opção pronta, use **Custom RTMP** com o servidor e a chave que o TikTok fornece.
+2. No OBS, em **Configurações → Transmissão**, escolha o serviço **Restream.io** e conecte a sua conta
+   (ou cole a chave do Restream).
+3. Mantenha o OBS em **1080x1920 (vertical)**. Lives verticais no YouTube costumam aparecer também no
+   feed do **Shorts**.
+4. Confira no Restream os limites do plano que você usa (quantidade de canais, resolução etc.).
+
 ## 3. Testar sem estar ao vivo (simulador)
 
 Abra o **painel** no navegador e clique em **🧪 Simulador**: ele cria espectadores falsos que comentam,
 curtem e mandam presentes. No painel também dá para mandar comentários/presentes de teste com um nome
 específico, pular de jogo ou escolher qual jogo rodar.
+
+Com o YouTube configurado, parte dos espectadores falsos vem "do YouTube" (com Super Chats), e o
+painel tem botões para testar comentário e Super Chat como se fossem do YouTube.
 
 Também dá para iniciar já com o simulador ligado: `start-windows.bat --sim` (ou `npm run sim`).
 Os jogadores simulados não entram no ranking real.
@@ -128,6 +166,8 @@ No Windows, recomendo também:
 | Opção | O que faz |
 |---|---|
 | `tiktokUsername` | Seu usuário do TikTok (sem @). |
+| `youtube.channel` | Seu canal do YouTube (`@seucanal`, ID `UC...` ou link da live). Vazio = YouTube desligado. |
+| `youtube.diamondsPerDollar` | Quantos "diamantes" vale cada US$ 1 de Super Chat (padrão 75). |
 | `signApiKey` | Opcional. Chave da [Euler Stream](https://www.eulerstream.com) (serviço que a biblioteca usa para conectar no chat). Use se a conexão começar a falhar por limite de uso. |
 | `server.port` | Porta do servidor (padrão 8080). |
 | `server.host` | `127.0.0.1` = só este PC acessa. Use `0.0.0.0` para abrir o painel de outro aparelho da rede (qualquer pessoa na sua rede poderá controlar). |
@@ -150,10 +190,12 @@ No Windows, recomendo também:
   repetitivas ou de baixa interação. Lives de jogos interativos são comuns, mas não há garantia de
   que uma live 100% AFK não seja penalizada. Leia as Diretrizes da Comunidade e as regras de LIVE,
   e acompanhe a live de vez em quando.
-- **Conexão com o chat não é oficial:** a leitura de comentários/presentes usa a biblioteca
+- **Conexão com o chat não é oficial:** a leitura de comentários/presentes do TikTok usa a biblioteca
   [`tiktok-live-connector`](https://github.com/zerodytrash/TikTok-Live-Connector), que não é da
   ByteDance. Se o TikTok mudar algo, pode parar de funcionar até a biblioteca ser atualizada
-  (`npm update tiktok-live-connector`).
+  (`npm update tiktok-live-connector`). O chat do YouTube é lido da mesma forma que a página de chat
+  do próprio site (sem API oficial): se o YouTube mudar o site, pode precisar de ajuste em
+  `server/youtube.js`.
 - **Presentes são dinheiro real** dos espectadores: deixe as vantagens claras (a tabela já aparece
   na tela) e não prometa prêmios fora do jogo.
 
@@ -162,7 +204,8 @@ No Windows, recomendo também:
 ```
 server/
   index.js        servidor web + WebSocket, painel, ranking, encerramento
-  tiktok.js       conexão com a live (reconexão automática + watchdog)
+  tiktok.js       conexão com a live do TikTok (reconexão automática + watchdog)
+  youtube.js      leitura do chat da live do YouTube (Super Chat vira presente)
   normalize.js    converte eventos do TikTok (inclui combos de presentes)
   simulator.js    espectadores falsos para testes
   store.js        ranking salvo em data/leaderboard.json

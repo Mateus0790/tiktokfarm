@@ -37,10 +37,13 @@ export function loadConfig(argv = process.argv.slice(2)) {
 
   if (process.env.TIKTOK_USERNAME) cfg.tiktokUsername = process.env.TIKTOK_USERNAME;
   if (process.env.SIGN_API_KEY) cfg.signApiKey = process.env.SIGN_API_KEY;
+  if (process.env.YOUTUBE_CHANNEL) cfg.youtube.channel = process.env.YOUTUBE_CHANNEL;
   if (process.env.PORT) cfg.server.port = Number(process.env.PORT);
   if (argv.includes('--sim')) cfg = deepMerge(cfg, { simulator: { enabled: true } });
   const userArg = argv.find((a) => a.startsWith('--user='));
   if (userArg) cfg.tiktokUsername = userArg.slice('--user='.length);
+  const ytArg = argv.find((a) => a.startsWith('--youtube='));
+  if (ytArg) cfg.youtube.channel = ytArg.slice('--youtube='.length);
 
   cfg.tiktokUsername = String(cfg.tiktokUsername || '').replace(/^@/, '').trim();
   return cfg;
@@ -55,5 +58,6 @@ export function publicConfig(cfg) {
     overlay: cfg.overlay,
     sound: cfg.sound,
     username: cfg.tiktokUsername,
+    youtube: Boolean(String(cfg.youtube?.channel || '').trim()),
   };
 }

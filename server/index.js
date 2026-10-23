@@ -4,6 +4,7 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import { loadConfig, publicConfig, ROOT } from './config.js';
 import { TikTokSource } from './tiktok.js';
+import { YouTubeSource, amountToDiamonds } from './youtube.js';
 import { Simulator, fakeUser } from './simulator.js';
 import { LeaderboardStore } from './store.js';
 import { avatarHandler } from './avatar.js';
@@ -14,7 +15,8 @@ process.on('unhandledRejection', (err) => console.error('[promise rejeitada]', e
 const cfg = loadConfig();
 const store = new LeaderboardStore();
 const tiktok = new TikTokSource(cfg);
-const simulator = new Simulator(cfg.simulator);
+const youtube = new YouTubeSource(cfg);
+const simulator = new Simulator({ ...cfg.simulator, youtube: Boolean(cfg.youtube.channel), diamondsPerDollar: cfg.youtube.diamondsPerDollar });
 
 const session = { startedAt: Date.now(), events: 0, diamonds: 0, gifters: new Map() };
 let lastGameState = null;
@@ -84,6 +86,8 @@ function statusMsg() {
   return {
     t: 'status',
     tiktok: tiktok.status,
+    youtube: youtube.status,
+    youtubeChannel: cfg.youtube.channel,
     username: cfg.tiktokUsername,
     simulator: simulator.running,
     overlays: overlays.size,
@@ -161,6 +165,7 @@ function onAdminMessage(msg) {
       return;
     case 'reconnect':
       tiktok.reconnect();
+      youtube.reconnect();
       break;
     case 'resetLeaderboard':
       store.reset();
@@ -176,15 +181,21 @@ function onAdminMessage(msg) {
 const testUsers = new Map();
 function simulateEvent(msg) {
   const name = String(msg.name || '').trim().slice(0, 24);
+  const platform = msg.platform === 'youtube' || msg.kind === 'superchat' ? 'youtube' : 'tiktok';
   let user;
   if (name) {
-    user = testUsers.get(name) || { ...fakeUser(testUsers.size), name, uniqueId: name };
-    testUsers.set(name, user);
+    const key = `${platform}:${name}`;
+    user = testUsers.get(key) || { ...fakeUser(testUsers.size), name, uniqueId: name, platform };
+    testUsers.set(key, user);
   } else {
-    user = simulator.users[Math.floor(Math.random() * simulator.users.length)];
+    user = { ...simulator.users[Math.floor(Math.random() * simulator.users.length)] };
+    user.platform = platform;
   }
   const kind = msg.kind;
-  if (kind === 'gift') {
+  if (kind === 'superchat') {
+    const amount = String(msg.amount || 'R$ 10,00');
+    handleEvent({ kind: 'gift', user, giftId: 'yt-superchat', giftName: `Super Chat ${amount}`, giftImage: null, count: 1, diamonds: amountToDiamonds(amount, cfg.youtube.diamondsPerDollar) });
+  } else if (kind === 'gift') {
     const diamonds = Math.max(1, Number(msg.diamonds) || 1);
     handleEvent({ kind, user, giftId: 0, giftName: msg.giftName || `${diamonds} diamantes`, giftImage: null, count: 1, diamonds });
   } else if (kind === 'like') handleEvent({ kind, user, count: Number(msg.count) || 10 });
@@ -206,6 +217,12 @@ function handleEvent(e) {
 }
 
 tiktok.on('event', handleEvent);
+youtube.on('event', handleEvent);
+youtube.on('status', (s) => {
+  console.log(`[youtube] ${s.state}: ${s.message}`);
+  broadcast(admins, statusMsg());
+  broadcast(overlays, { t: 'youtube', status: s });
+});
 simulator.on('event', handleEvent);
 tiktok.on('status', (s) => {
   console.log(`[tiktok] ${s.state}: ${s.message}`);
@@ -222,8 +239,10 @@ server.listen(cfg.server.port, cfg.server.host, () => {
   console.log(`  Overlay (OBS, 1080x1920): ${base}/overlay.html`);
   console.log(`  Painel de controle:       ${base}/admin.html`);
   console.log(`  Usuário TikTok:           @${cfg.tiktokUsername}`);
+  console.log(`  Canal YouTube:            ${cfg.youtube.channel || '(desligado)'}`);
   console.log('');
   tiktok.start();
+  youtube.start();
   if (cfg.simulator.enabled) {
     console.log('  [simulador] ligado — eventos falsos sendo gerados.');
     simulator.start();
@@ -238,6 +257,7 @@ function shutdown(code = EXIT_STOP) {
   broadcast(overlays, { t: 'shutdown' });
   broadcast(admins, { t: 'shutdown' });
   simulator.stop();
+  youtube.stop();
   store.save();
   const exit = () => process.exit(code);
   // dá um instante para as mensagens chegarem ao overlay/painel

@@ -113,6 +113,9 @@ class GameManager {
       case 'tiktok':
         this.tiktok = msg.status;
         break;
+      case 'youtube':
+        this.youtube = msg.status;
+        break;
       case 'event':
         this.onEvent(msg.e);
         break;
@@ -169,6 +172,7 @@ class GameManager {
     } else {
       if (user.name) u.name = user.name;
       if (user.avatar) u.avatar = user.avatar;
+      if (user.platform) u.platform = user.platform;
     }
     u.lastSeen = performance.now();
     if (e.kind === 'chat') {
@@ -235,7 +239,7 @@ class GameManager {
     const p = this.game.join(u, team ?? u.teamPref ?? null);
     if (p && !u.isBot) {
       const t = p.team != null ? ` ${TEAMS[p.team].emoji} ${TEAMS[p.team].name}` : '';
-      this.addFeed(`➕ ${u.name} entrou${t}`, '#b8ffcf');
+      this.addFeed(`➕ ${u.platform === 'youtube' ? '▶️ ' : ''}${u.name} entrou${t}`, '#b8ffcf');
       this.sfx('join', 0.15);
     }
     return p;
@@ -244,8 +248,8 @@ class GameManager {
   showGift(u, e, label) {
     const tier = giftTier(e.diamonds);
     this.sfx(`gift${tier}`, tier >= 3 ? 0.4 : 0.08);
-    const desc = `${e.giftName}${e.count > 1 ? ` x${e.count}` : ''} (${e.diamonds}💎)`;
-    this.addFeed(`🎁 ${u.name}: ${desc}${label ? ` → ${label}` : ''}`, '#ffe066');
+    const desc = u.platform === 'youtube' ? `${e.giftName} (≈${e.diamonds}💎)` : `${e.giftName}${e.count > 1 ? ` x${e.count}` : ''} (${e.diamonds}💎)`;
+    this.addFeed(`${u.platform === 'youtube' ? '▶️' : '🎁'} ${u.name}: ${desc}${label ? ` → ${label}` : ''}`, '#ffe066');
     if (tier >= 2 || this.banners.length < 2) {
       let img = null;
       if (e.giftImage) {
@@ -509,7 +513,7 @@ class GameManager {
     if (!guide?.length) return;
     const h = 56 + guide.length * 42;
     roundRect(g, 20, y, 1040, h, 22, 'rgba(10,10,30,0.82)', 'rgba(255,224,102,0.5)', 3);
-    text(g, '🎁 PRESENTES DÃO PODERES', 540, y + 30, 28, '#ffe066');
+    text(g, this.cfg.youtube ? '🎁 PRESENTES E ▶️ SUPER CHAT DÃO PODERES' : '🎁 PRESENTES DÃO PODERES', 540, y + 30, 28, '#ffe066');
     guide.forEach((row, i) => {
       const ry = y + 74 + i * 42;
       text(g, row.icon, 60, ry, 30, '#fff', 'center', 900, false);
@@ -643,9 +647,11 @@ class GameManager {
 
   drawStatus(g) {
     if (this.phase === 'standby') return;
-    const s = this.tiktok;
-    if (!s || s.state === 'connected') return;
-    const msg = s.state === 'disabled' ? '⚙️ Modo teste (sem TikTok)' : s.state === 'offline' ? '⏳ Aguardando a live começar...' : '🔌 Conectando ao chat do TikTok...';
+    // só avisa quando nenhuma plataforma (TikTok ou YouTube) está conectada
+    const sources = [this.tiktok, this.youtube].filter((s) => s && s.state !== 'disabled');
+    if (sources.some((s) => s.state === 'connected')) return;
+    if (!this.tiktok && !this.youtube) return;
+    const msg = !sources.length ? '⚙️ Modo teste (sem TikTok/YouTube)' : sources.every((s) => s.state === 'offline') ? '⏳ Aguardando a live começar...' : '🔌 Conectando ao chat da live...';
     g.globalAlpha = 0.7;
     text(g, msg, 30, 120, 22, '#ddd', 'left', 700);
     g.globalAlpha = 1;

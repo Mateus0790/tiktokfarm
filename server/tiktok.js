@@ -132,7 +132,7 @@ export class TikTokSource extends EventEmitter {
       this.lastEventAt = Date.now();
       const user = normalizeUser(data?.user);
       if (!user) return;
-      this.emit('event', { kind, user, ...extra });
+      this.emit('event', { kind, user: { ...user, platform: 'tiktok' }, ...extra });
     };
 
     conn.on(WebcastEvent.CHAT, (d) => send('chat', d, { text: chatText(d) }));

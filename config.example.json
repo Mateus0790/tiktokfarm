@@ -47,6 +47,13 @@
     "feedY": 1770
   },
 
+  "youtube": {
+    "channel": "",
+    "diamondsPerDollar": 75,
+    "pollMinMs": 1500,
+    "offlineRetrySeconds": 60
+  },
+
   "tiktok": {
     "reconnectDelaySeconds": 15,
     "offlineRetrySeconds": 60,

@@ -138,6 +138,25 @@ export function drawAvatar(g, user, x, y, r, ring = '#fff', ringW = Math.max(3, 
     g.fill();
   }
   g.drawImage(avatarSprite(user), x - r, y - r, r * 2, r * 2);
+  if (user.platform === 'youtube' && r >= 16) drawYouTubeBadge(g, x + r * 0.72, y + r * 0.72, Math.max(8, r * 0.36));
+}
+
+/** Selo vermelho com ▶ para identificar quem veio do YouTube. */
+export function drawYouTubeBadge(g, x, y, s) {
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.roundRect(x - s - 2, y - s * 0.75 - 2, s * 2 + 4, s * 1.5 + 4, s * 0.45);
+  g.fill();
+  g.fillStyle = '#ff0033';
+  g.beginPath();
+  g.roundRect(x - s, y - s * 0.75, s * 2, s * 1.5, s * 0.4);
+  g.fill();
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.moveTo(x - s * 0.3, y - s * 0.4);
+  g.lineTo(x + s * 0.45, y);
+  g.lineTo(x - s * 0.3, y + s * 0.4);
+  g.fill();
 }
 
 // ------------------------------------------------------------------ Texto / formas

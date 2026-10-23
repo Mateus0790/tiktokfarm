@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { amountToDiamonds } from './youtube.js';
 
 // Gera espectadores e eventos falsos para testar os jogos sem estar ao vivo.
 
@@ -26,18 +27,23 @@ function weighted(list) {
   return list[0];
 }
 
-export function fakeUser(i) {
+export function fakeUser(i, platform = 'tiktok') {
   const name = `${pick(FIRST)}_${pick(LAST)}`;
   const id = `sim${i}_${Math.floor(Math.random() * 1e6)}`;
-  return { id, uniqueId: name.toLowerCase(), name, avatar: `https://api.dicebear.com/9.x/thumbs/png?size=128&seed=${id}` };
+  return { id, uniqueId: name.toLowerCase(), name, avatar: `https://api.dicebear.com/9.x/thumbs/png?size=128&seed=${id}`, platform };
 }
 
 export class Simulator extends EventEmitter {
   constructor(cfg) {
     super();
     this.cfg = cfg;
-    this.users = Array.from({ length: cfg.viewers }, (_, i) => fakeUser(i));
+    this.users = Array.from({ length: cfg.viewers }, (_, i) => this.newUser(i));
     this.timer = null;
+  }
+
+  /** Com YouTube ligado, ~30% dos espectadores falsos vêm do YouTube. */
+  newUser(i) {
+    return fakeUser(i, this.cfg.youtube && Math.random() < 0.3 ? 'youtube' : 'tiktok');
   }
 
   get running() {
@@ -57,9 +63,18 @@ export class Simulator extends EventEmitter {
 
   tick() {
     // Viewers vão "chegando" aos poucos e alguns vão embora.
-    if (Math.random() < 0.02) this.users[Math.floor(Math.random() * this.users.length)] = fakeUser(Date.now());
+    if (Math.random() < 0.02) this.users[Math.floor(Math.random() * this.users.length)] = this.newUser(Date.now());
     const user = pick(this.users);
     const r = Math.random();
+    if (user.platform === 'youtube') {
+      // YouTube não tem curtidas pelo chat: só comentários e Super Chats
+      if (r < 0.9) this.emit('event', { kind: 'chat', user, text: pick(CHATS) });
+      else {
+        const amount = pick(['R$ 5,00', 'R$ 10,00', 'R$ 20,00', 'R$ 50,00', 'US$ 2.00', 'R$ 200,00']);
+        this.emit('event', { kind: 'gift', user, giftId: 'yt-superchat', giftName: `Super Chat ${amount}`, giftImage: null, count: 1, diamonds: amountToDiamonds(amount, this.cfg.diamondsPerDollar || 75) });
+      }
+      return;
+    }
     if (r < 0.35) this.emit('event', { kind: 'chat', user, text: pick(CHATS) });
     else if (r < 0.8) this.emit('event', { kind: 'like', user, count: Math.ceil(rand(1, 15)) });
     else if (r < 0.95) {
