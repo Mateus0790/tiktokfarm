@@ -5,7 +5,7 @@ Você deixa o computador ligado com o OBS transmitindo; quem está assistindo en
 comentando, e o **avatar (foto de perfil) de cada pessoa** vira um personagem na tela.
 **Presentes dão vantagens** dentro do jogo, curtidas também ajudam.
 
-Os jogos se revezam automaticamente, com tela de resultado e ranking entre eles:
+São 9 jogos que se revezam sozinhos (o público vota no próximo), com tela de resultado e ranking entre eles:
 
 | Jogo | Estilo | Como funciona |
 |---|---|---|
@@ -14,6 +14,9 @@ Os jogos se revezam automaticamente, com tela de resultado e ranking entre eles:
 | 🏰 **Defesa do Castelo** | Tower defense (cooperativo) | Cada pessoa vira uma torre com o próprio avatar e atira sozinha nas ondas de monstros. |
 | 🏁 **Corrida Maluca** | Corrida | Seu avatar corre sozinho; comentários e curtidas empurram. Os 3 primeiros vencem. |
 | 🧠 **Quiz Show** | Perguntas e respostas | Perguntas de múltipla escolha: comente **A, B, C ou D**. Quem acerta mais rápido ganha mais pontos. |
+| 🤼 **Sumô na Arena** | Battle royale (cada um por si) | Os avatares se trombam numa plataforma sobre a lava que vai encolhendo. Quem cai está fora; o último de pé vence. |
+| 🪢 **Cabo de Guerra** | 2 times | Vermelho x Azul: cada curtida, comentário e presente puxa a corda. Quem arrastar a marca até a sua linha vence a rodada (melhor de 3). |
+| 🎯 **Plinko** | Sorte + pontos | Cada comentário solta uma bolinha com o seu avatar entre os pinos; ela cai numa casa de pontos (as pontas valem mais). |
 | ✏️ **Adivinha a Palavra** | Estilo Gartic | Aparecem a categoria e os espaços da palavra; letras e uma dica em emoji surgem com o tempo. Os 3 primeiros a escrever a palavra pontuam. |
 
 ### 🗳️ O público escolhe o próximo jogo
@@ -37,6 +40,15 @@ na votação seguinte.
 | 10+ 💎 | Herói **gigante** + cura o castelo | **Bomba de tinta** | **Congela** todos os monstros | Pulo + **escudo** |
 | 100+ 💎 | **Meteoro** no castelo inimigo (ou revive o seu) | **Tsunami** no time líder | **Bombardeio** + cura | **Raio** nos 5 líderes |
 | 1000+ 💎 | **Dragão**: arrasa os inimigos | **Dominação** de uma faixa do mapa | **Nuke** + castelo novo | **Foguete** (+30%) |
+
+Nos jogos novos:
+
+| Diamantes | Sumô na Arena | Cabo de Guerra | Plinko |
+|---|---|---|---|
+| 1+ 💎 | Fica mais pesado e firme | Puxão (proporcional aos diamantes) | Bolinhas de ouro x2 (uma por 💎, até 5) |
+| 10+ 💎 | **Onda de choque** em quem está perto | **Puxão forte** | 3 bolinhas x3 |
+| 100+ 💎 | **Escudo** 12s + onda gigante (ou **volta** pra arena se tinha caído) | **Puxão de gorila** | **Mega bola** x5 + 3 bolinhas x3 |
+| 1000+ 💎 | **Terremoto**: joga todo mundo pra borda | **Trator**: arrasta a corda até a sua linha | **Chuva de ouro**: 10 bolinhas x10 |
 
 No **Quiz** e no **Adivinha a Palavra**, presentes dão **multiplicador** para o próximo acerto
 (1+💎: x2 acumulando até x5; 10+💎: x3 e uma ajuda para todos, eliminando uma alternativa errada ou
@@ -191,7 +203,8 @@ mudanças valem a partir do próximo jogo (ou clique em "Recarregar overlay" no 
 | `signApiKey` | Opcional. Chave da [Euler Stream](https://www.eulerstream.com) (serviço que a biblioteca usa para conectar no chat). Use se a conexão começar a falhar por limite de uso. |
 | `server.port` | Porta do servidor (padrão 8080). |
 | `server.host` | `127.0.0.1` = só este PC acessa. Use `0.0.0.0` para abrir o painel de outro aparelho da rede (qualquer pessoa na sua rede poderá controlar). |
-| `games.rotation` | Jogos que podem aparecer (e a ordem, se a votação estiver desligada). Remova um para tirá-lo. IDs: `teams`, `territory`, `towerdefense`, `race`, `quiz`, `guess`. |
+| `games.rotation` | Jogos que podem aparecer (e a ordem, se a votação estiver desligada). IDs: `teams`, `territory`, `towerdefense`, `race`, `quiz`, `guess`, `sumo`, `tug`, `plinko`. Jogos novos de atualizações entram aqui sozinhos. |
+| `games.disabled` | Jogos que você **não** quer na live, ex.: `["tug", "quiz"]`. |
 | `voting.enabled` / `voting.seconds` / `voting.options` | Liga a votação do próximo jogo, quanto tempo ela dura e quantas opções aparecem (2 a 4). |
 | `games.shuffle` | `true` = ordem aleatória a cada ciclo. |
 | `games.durations` | Duração máxima de cada jogo em segundos. |
@@ -235,7 +248,7 @@ public/
   admin.html      painel de controle
   js/main.js      gerenciador: rotação, HUD, presentes, bots, intervalo
   js/core.js      avatares, efeitos, utilitários de desenho
-  js/games/       um arquivo por jogo (teams, territory, towerdefense, race, quiz, guess)
+  js/games/       um arquivo por jogo (teams, territory, towerdefense, race, quiz, guess, sumo, tug, plinko)
   content/        perguntas do Quiz e palavras do Adivinha (JSON editável)
 ```
 

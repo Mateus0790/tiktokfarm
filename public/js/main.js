@@ -5,9 +5,12 @@ import { TowerDefenseGame } from './games/towerdefense.js';
 import { RaceGame } from './games/race.js';
 import { QuizGame } from './games/quiz.js';
 import { GuessGame } from './games/guess.js';
+import { SumoGame } from './games/sumo.js';
+import { TugGame } from './games/tug.js';
+import { PlinkoGame } from './games/plinko.js';
 import { Sound } from './audio.js';
 
-const GAMES = { teams: TeamsGame, territory: TerritoryGame, towerdefense: TowerDefenseGame, race: RaceGame, quiz: QuizGame, guess: GuessGame };
+const GAMES = { teams: TeamsGame, territory: TerritoryGame, towerdefense: TowerDefenseGame, race: RaceGame, quiz: QuizGame, guess: GuessGame, sumo: SumoGame, tug: TugGame, plinko: PlinkoGame };
 
 const DEFAULT_CONFIG = {
   games: { rotation: Object.keys(GAMES), shuffle: false, intermissionSeconds: 14, durations: {} },

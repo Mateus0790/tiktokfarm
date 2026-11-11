@@ -14,7 +14,8 @@
   },
 
   "games": {
-    "rotation": ["teams", "territory", "towerdefense", "race", "quiz", "guess"],
+    "rotation": ["teams", "territory", "towerdefense", "race", "quiz", "guess", "sumo", "tug", "plinko"],
+    "disabled": [],
     "shuffle": false,
     "intermissionSeconds": 14,
     "durations": {
@@ -23,7 +24,10 @@
       "towerdefense": 300,
       "race": 150,
       "quiz": 240,
-      "guess": 225
+      "guess": 225,
+      "sumo": 180,
+      "tug": 180,
+      "plinko": 150
     }
   },
 
