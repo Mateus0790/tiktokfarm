@@ -1,7 +1,7 @@
 // Proxy de fotos de perfil: usado pelo overlay só quando a foto não carrega direto
-// do CDN do TikTok. Aceita apenas domínios de imagem do TikTok/ByteDance.
+// do CDN. Aceita apenas domínios de imagem do TikTok/ByteDance e do YouTube/Google.
 
-const ALLOWED_HOSTS = /(^|\.)(tiktokcdn\.com|tiktokcdn-us\.com|tiktokcdn-eu\.com|ibyteimg\.com|byteimg\.com|muscdn\.com|tiktokv\.com)$/i;
+const ALLOWED_HOSTS = /(^|\.)(tiktokcdn\.com|tiktokcdn-us\.com|tiktokcdn-eu\.com|ibyteimg\.com|byteimg\.com|muscdn\.com|tiktokv\.com|ggpht\.com|googleusercontent\.com|ytimg\.com)$/i;
 const MAX_BYTES = 2 * 1024 * 1024;
 const MAX_ENTRIES = 400;
 const cache = new Map(); // url → { type, body }

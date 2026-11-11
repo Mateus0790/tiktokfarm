@@ -1,5 +1,18 @@
 // Utilitários compartilhados por todos os jogos: constantes, avatares, desenho e efeitos.
 
+// OBS antigo (navegador interno anterior ao Chrome 99) não tem roundRect no canvas.
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    r = Math.max(0, Math.min(Number(Array.isArray(r) ? r[0] : r) || 0, w / 2, h / 2));
+    this.moveTo(x + r, y);
+    this.arcTo(x + w, y, x + w, y + h, r);
+    this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+    this.closePath();
+  };
+}
+
 export const W = 1080;
 export const H = 1920;
 
@@ -138,6 +151,25 @@ export function drawAvatar(g, user, x, y, r, ring = '#fff', ringW = Math.max(3, 
     g.fill();
   }
   g.drawImage(avatarSprite(user), x - r, y - r, r * 2, r * 2);
+  if (user.platform === 'youtube' && r >= 16) drawYouTubeBadge(g, x + r * 0.72, y + r * 0.72, Math.max(8, r * 0.36));
+}
+
+/** Selo vermelho com ▶ para identificar quem veio do YouTube. */
+export function drawYouTubeBadge(g, x, y, s) {
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.roundRect(x - s - 2, y - s * 0.75 - 2, s * 2 + 4, s * 1.5 + 4, s * 0.45);
+  g.fill();
+  g.fillStyle = '#ff0033';
+  g.beginPath();
+  g.roundRect(x - s, y - s * 0.75, s * 2, s * 1.5, s * 0.4);
+  g.fill();
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.moveTo(x - s * 0.3, y - s * 0.4);
+  g.lineTo(x + s * 0.45, y);
+  g.lineTo(x - s * 0.3, y + s * 0.4);
+  g.fill();
 }
 
 // ------------------------------------------------------------------ Texto / formas
@@ -310,5 +342,61 @@ export class SpatialGrid {
         if (list) for (const o of list) out.push(o);
       }
     return out;
+  }
+}
+
+// ------------------------------------------------------------------ Texto de chat
+/** "Maçã!" → "maca": minúsculas, sem acentos, só letras e números. */
+export function normalizeText(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/** Quebra um texto em linhas que caibam em maxW. */
+export function wrapLines(g, str, maxW, size, weight = 900) {
+  g.font = `${weight} ${size}px ${FONT}`;
+  const lines = [];
+  let line = '';
+  for (const word of String(str).split(/\s+/)) {
+    const test = line ? `${line} ${word}` : word;
+    if (g.measureText(test).width > maxW && line) {
+      lines.push(line);
+      line = word;
+    } else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** Distância de edição (para o "quase!" do Adivinha a Palavra). */
+export function editDistance(a, b) {
+  const m = a.length;
+  const n = b.length;
+  if (Math.abs(m - n) > 2) return 99;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+
+// ------------------------------------------------------------------ Conteúdo editável
+/** Perguntas e palavras ficam em public/content/*.json para serem fáceis de editar. */
+export const content = { perguntas: [], palavras: [] };
+export async function loadContent() {
+  for (const key of ['perguntas', 'palavras']) {
+    try {
+      const r = await fetch(`content/${key}.json`, { cache: 'no-store' });
+      const data = await r.json();
+      content[key] = (data[key] || []).filter((x) => (key === 'perguntas' ? x.q && x.a?.length >= 2 : x.w));
+    } catch (err) {
+      console.warn(`não consegui carregar content/${key}.json`, err);
+    }
   }
 }

@@ -37,10 +37,20 @@ export function loadConfig(argv = process.argv.slice(2)) {
 
   if (process.env.TIKTOK_USERNAME) cfg.tiktokUsername = process.env.TIKTOK_USERNAME;
   if (process.env.SIGN_API_KEY) cfg.signApiKey = process.env.SIGN_API_KEY;
+  if (process.env.YOUTUBE_CHANNEL) cfg.youtube.channel = process.env.YOUTUBE_CHANNEL;
   if (process.env.PORT) cfg.server.port = Number(process.env.PORT);
   if (argv.includes('--sim')) cfg = deepMerge(cfg, { simulator: { enabled: true } });
   const userArg = argv.find((a) => a.startsWith('--user='));
   if (userArg) cfg.tiktokUsername = userArg.slice('--user='.length);
+  const ytArg = argv.find((a) => a.startsWith('--youtube='));
+  if (ytArg) cfg.youtube.channel = ytArg.slice('--youtube='.length);
+
+  // Jogos novos de atualizações entram sozinhos na rotação de quem tem um config.json
+  // antigo. Para tirar um jogo, coloque o ID dele em games.disabled.
+  const disabled = new Set(cfg.games.disabled || []);
+  const rotation = (cfg.games.rotation || []).filter((id) => !disabled.has(id));
+  for (const id of defaults.games.rotation) if (!rotation.includes(id) && !disabled.has(id)) rotation.push(id);
+  cfg.games.rotation = rotation;
 
   cfg.tiktokUsername = String(cfg.tiktokUsername || '').replace(/^@/, '').trim();
   return cfg;
@@ -54,6 +64,8 @@ export function publicConfig(cfg) {
     bots: cfg.bots,
     overlay: cfg.overlay,
     sound: cfg.sound,
+    voting: cfg.voting,
     username: cfg.tiktokUsername,
+    youtube: Boolean(String(cfg.youtube?.channel || '').trim()),
   };
 }
